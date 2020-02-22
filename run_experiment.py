@@ -1,5 +1,5 @@
-from src.data.make_dataset import load_dataset
-
+from src.models.training_utils import prepare_experiment_data
 
 if __name__ == "__main__":
-    pass
+    experiment_data = prepare_experiment_data()
+    print('done')
