@@ -1,30 +1,34 @@
-# -*- coding: utf-8 -*-
-import click
-import logging
-from pathlib import Path
-from dotenv import find_dotenv, load_dotenv
+import io
+import os
 
+import pandas as pd
+import requests
 
-@click.command()
-@click.argument('input_filepath', type=click.Path(exists=True))
-@click.argument('output_filepath', type=click.Path())
-def main(input_filepath, output_filepath):
-    """ Runs data processing scripts to turn raw data from (../raw) into
-        cleaned data ready to be analyzed (saved in ../processed).
-    """
-    logger = logging.getLogger(__name__)
-    logger.info('making final data set from raw data')
+DATA_PATH = os.path.join(os.curdir, "data", "processed")
+RAW_DATA_FILENAME = os.path.join(DATA_PATH, "raw_data.csv")
 
+def download_dataset() -> pd.DataFrame:
+    url = "https://raw.githubusercontent.com/MengtingWan/marketBias/master/data/df_electronics.csv"
+    s = requests.get(url).content
+    raw_data = pd.read_csv(io.StringIO(s.decode('utf-8')), sep=",")
+    raw_data.to_csv(RAW_DATA_FILENAME, index=False)
+    return raw_data
 
-if __name__ == '__main__':
-    log_fmt = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    logging.basicConfig(level=logging.INFO, format=log_fmt)
+def load_dataset(download_new: bool=False) -> pd.DataFrame:
+    raw_data = download_dataset() if download_new else pd.read_csv(RAW_DATA_FILENAME)
+    return raw_data
 
-    # not used in this stub but often useful for finding various files
-    project_dir = Path(__file__).resolve().parents[2]
+def validate_unique_ids(raw_data: pd.DataFrame):
+    uids_nums = set(range(raw_data.user_id.max() + 1))
+    uids_set = set(raw_data.user_id.unique())
+    assert uids_nums == uids_set
 
-    # find .env automagically by walking up directories until it's found, then
-    # load up the .env entries as environment variables
-    load_dotenv(find_dotenv())
+    item_ids_nums = set(range(raw_data.item_id.max() + 1))
+    item_ids_set = set(raw_data.item_id.unique())
+    assert item_ids_nums == item_ids_set
+    max_uid = raw_data.user_id.max()
 
-    main()
+    unique_uid = pd.Series(raw_data.user_id.unique())
+    expected_ids = pd.Series(range(max_uid + 1))
+
+    pd.util.testing.assert_series_equal(unique_uid, expected_ids)
