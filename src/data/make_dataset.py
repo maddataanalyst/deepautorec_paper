@@ -4,8 +4,9 @@ import os
 import pandas as pd
 import requests
 
-DATA_PATH = os.path.join(os.curdir, "data", "processed")
+DATA_PATH = os.path.join(os.curdir, "data", "raw")
 RAW_DATA_FILENAME = os.path.join(DATA_PATH, "raw_data.csv")
+
 
 def download_dataset() -> pd.DataFrame:
     url = "https://raw.githubusercontent.com/MengtingWan/marketBias/master/data/df_electronics.csv"
@@ -14,9 +15,11 @@ def download_dataset() -> pd.DataFrame:
     raw_data.to_csv(RAW_DATA_FILENAME, index=False)
     return raw_data
 
-def load_dataset(download_new: bool=False) -> pd.DataFrame:
+
+def load_dataset(download_new: bool = False) -> pd.DataFrame:
     raw_data = download_dataset() if download_new else pd.read_csv(RAW_DATA_FILENAME)
     return raw_data
+
 
 def validate_unique_ids(raw_data: pd.DataFrame):
     uids_nums = set(range(raw_data.user_id.max() + 1))

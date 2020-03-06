@@ -36,11 +36,14 @@ ExperimentData = namedtuple(
     ]
 )
 
-def make_id_column_consecutive_integer_from_0(data, col):
+
+def make_id_column_consecutive_integer_from_0(data, col, new_colname=None):
     le = LabelEncoder()
     data_encoded = data.copy()
-    data_encoded[col] = le.fit_transform(data_encoded[col])
+    new_col = new_colname if new_colname else col
+    data_encoded[new_col] = le.fit_transform(data_encoded[col])
     return data_encoded
+
 
 def get_users_with_min_n_ratings(raw_data: pd.DataFrame, min_ratings_per_user: int = 3) -> pd.DataFrame:
     user_ids_ratings_cnt = pd.value_counts(raw_data.user_id).reset_index().rename(
@@ -59,6 +62,7 @@ def get_users_with_min_n_ratings(raw_data: pd.DataFrame, min_ratings_per_user: i
 
     return data_min_n_ratings
 
+
 def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int) -> csr_matrix:
     user_item_matrix = lil_matrix((nuser, nitem), dtype=np.float32)
 
@@ -73,7 +77,8 @@ def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int) ->
     user_item_matrix = user_item_matrix.tocsr()
     return user_item_matrix
 
-def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, min_ratings=3,
+
+def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, min_ratings=3, uid_colname='user_id', iid_colname='item_id',
                                           random_state=999):
     Xr_test_pred_hidden = Xr_test.copy()
     X_test_raw_pred_hidden = X_test_raw.copy()
@@ -89,8 +94,8 @@ def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, mi
     y = []
 
     for uid in selected_uids:
-        user_data = X_test_raw.loc[X_test_raw.user_id == uid, :]
-        item_id = int(np.random.choice(user_data.item_id, size=1)[0])
+        user_data = X_test_raw.loc[X_test_raw[uid_colname] == uid, :]
+        item_id = int(np.random.choice(user_data[iid_colname], size=1)[0])
         uids.append(uid)
         item_ids.append(item_id)
         rating_sparse = Xr_test[uid, item_id].flatten()[0]
@@ -101,9 +106,10 @@ def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, mi
         y.append(rating_sparse)
         Xr_test_pred_hidden[uid, item_id] = 0.0
         X_test_raw_pred_hidden.loc[
-            (X_test_raw_pred_hidden.user_id == uid) & (X_test_raw_pred_hidden.item_id == item_id)] = 0.0
+            (X_test_raw_pred_hidden[uid_colname] == uid) & (X_test_raw_pred_hidden[iid_colname] == item_id)] = 0.0
 
     return uids, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden
+
 
 def train_validation_test_split(
         data: pd.DataFrame,
@@ -113,7 +119,6 @@ def train_validation_test_split(
         valid_seed: int = 456,
         test_ratigs_perc_to_hide: float = 0.3,
         test_ratings_to_hide_seed: int = 999) -> ExperimentData:
-
     data = make_id_column_consecutive_integer_from_0(data, 'user_id')
     data = make_id_column_consecutive_integer_from_0(data, 'item_id')
     data.sort_values(by=['user_id', 'item_id'], ascending=True)
@@ -127,13 +132,13 @@ def train_validation_test_split(
                             data.loc[data.user_id.isin(validation_ids)]
 
     X_train_raw.reset_index(inplace=True, drop=True)
-    X_train_raw = make_id_column_consecutive_integer_from_0(X_train_raw, 'user_id')
+    X_train_raw = make_id_column_consecutive_integer_from_0(X_train_raw, 'user_id', 'uid_train')
 
     X_test_raw.reset_index(inplace=True, drop=True)
-    X_test_raw = make_id_column_consecutive_integer_from_0(X_test_raw, 'user_id')
+    X_test_raw = make_id_column_consecutive_integer_from_0(X_test_raw, 'user_id', 'uid_test')
 
     X_val_raw.reset_index(inplace=True, drop=True)
-    X_val_raw = make_id_column_consecutive_integer_from_0(X_val_raw, 'user_id')
+    X_val_raw = make_id_column_consecutive_integer_from_0(X_val_raw, 'user_id', 'uid_val')
 
     assert X_train_raw.shape[0] + X_test_raw.shape[0] + X_val_raw.shape[0] == data.shape[0]
 
@@ -171,8 +176,9 @@ def train_validation_test_split(
         y
     )
 
-def prepare_experiment_data() -> ExperimentData:
-    raw_data = load_dataset()
+
+def prepare_experiment_data(download_new=False) -> ExperimentData:
+    raw_data = load_dataset(download_new)
     raw_data = get_dummy_values(fill_missing_values(raw_data))
     data_min_n_ratings = get_users_with_min_n_ratings(raw_data, 3)
     experiment_data = train_validation_test_split(data_min_n_ratings)
