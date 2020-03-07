@@ -9,6 +9,12 @@ from sklearn.model_selection import train_test_split
 from src.data.make_dataset import load_dataset
 from src.features.build_features import get_dummy_values, fill_missing_values, FEATURE_COLUMNS
 
+UID_VALC_COL = 'uid_val'
+
+UID_TEST_COL = 'uid_test'
+
+UID_TRAIN_COL = 'uid_train'
+
 RATING = 'rating'
 
 ITEM_ID_COL = 'item_id'
@@ -63,13 +69,13 @@ def get_users_with_min_n_ratings(raw_data: pd.DataFrame, min_ratings_per_user: i
     return data_min_n_ratings
 
 
-def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int) -> csr_matrix:
+def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int, uid_colname: str, iid_colname: str = "item_id") -> csr_matrix:
     user_item_matrix = lil_matrix((nuser, nitem), dtype=np.float32)
 
     for row_idx, row in data.iterrows():
-        uidx = row['user_id']
-        iidx = row['item_id']
-        rating = row['rating']
+        uidx = row[uid_colname]
+        iidx = row[iid_colname]
+        rating = row[RATING]
         user_item_matrix[uidx, iidx] = rating
         if row_idx % 10000 == 0:
             print(f"Processed: {row_idx / float(data.shape[0])}%")
@@ -132,30 +138,31 @@ def train_validation_test_split(
                             data.loc[data.user_id.isin(validation_ids)]
 
     X_train_raw.reset_index(inplace=True, drop=True)
-    X_train_raw = make_id_column_consecutive_integer_from_0(X_train_raw, 'user_id', 'uid_train')
+    X_train_raw = make_id_column_consecutive_integer_from_0(X_train_raw, USER_ID_COL, UID_TRAIN_COL)
 
     X_test_raw.reset_index(inplace=True, drop=True)
-    X_test_raw = make_id_column_consecutive_integer_from_0(X_test_raw, 'user_id', 'uid_test')
+    X_test_raw = make_id_column_consecutive_integer_from_0(X_test_raw, USER_ID_COL, UID_TEST_COL)
 
     X_val_raw.reset_index(inplace=True, drop=True)
-    X_val_raw = make_id_column_consecutive_integer_from_0(X_val_raw, 'user_id', 'uid_val')
+    X_val_raw = make_id_column_consecutive_integer_from_0(X_val_raw, USER_ID_COL, UID_VALC_COL)
 
     assert X_train_raw.shape[0] + X_test_raw.shape[0] + X_val_raw.shape[0] == data.shape[0]
 
-    Xr_train = prepare_sparse_ratings_matrix(X_train_raw, nuser, nitem)
+    Xr_train = prepare_sparse_ratings_matrix(X_train_raw, nuser, nitem, UID_TRAIN_COL)
     Xf_train = X_train_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
 
-    Xr_test = prepare_sparse_ratings_matrix(X_test_raw, nuser, nitem)
+    Xr_test = prepare_sparse_ratings_matrix(X_test_raw, nuser, nitem, UID_TEST_COL)
     Xf_test = X_test_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
 
-    Xr_val = prepare_sparse_ratings_matrix(X_val_raw, nuser, nitem)
+    Xr_val = prepare_sparse_ratings_matrix(X_val_raw, nuser, nitem, UID_VALC_COL)
     Xf_val = X_val_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
 
     uids, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
         Xr_test,
-        X_test_raw[[USER_ID_COL, ITEM_ID_COL, RATING]],
+        X_test_raw[[USER_ID_COL, UID_TEST_COL, ITEM_ID_COL, RATING]],
         perc_test=test_ratigs_perc_to_hide,
-        random_state=test_ratings_to_hide_seed
+        random_state=test_ratings_to_hide_seed,
+        uid_colname=UID_TEST_COL
     )
 
     return ExperimentData(
@@ -167,9 +174,9 @@ def train_validation_test_split(
         Xf_test,
         Xf_val,
 
-        X_train_raw[[USER_ID_COL, ITEM_ID_COL, RATING]],
+        X_train_raw[[USER_ID_COL, UID_TRAIN_COL, ITEM_ID_COL, RATING]],
         X_test_raw_pred_hidden,
-        X_val_raw[[USER_ID_COL, ITEM_ID_COL, RATING]],
+        X_val_raw[[USER_ID_COL, UID_VALC_COL, ITEM_ID_COL, RATING]],
 
         uids,
         item_ids,
