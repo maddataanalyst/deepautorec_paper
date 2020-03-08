@@ -37,6 +37,7 @@ ExperimentData = namedtuple(
         "Xraw_valid",
 
         "test_uids",
+        "test_uids_original",
         "test_iids",
         "test_y"
     ]
@@ -69,7 +70,8 @@ def get_users_with_min_n_ratings(raw_data: pd.DataFrame, min_ratings_per_user: i
     return data_min_n_ratings
 
 
-def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int, uid_colname: str, iid_colname: str = "item_id") -> csr_matrix:
+def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int, uid_colname: str,
+                                  iid_colname: str = "item_id") -> csr_matrix:
     user_item_matrix = lil_matrix((nuser, nitem), dtype=np.float32)
 
     for row_idx, row in data.iterrows():
@@ -84,7 +86,9 @@ def prepare_sparse_ratings_matrix(data: pd.DataFrame, nuser: int, nitem: int, ui
     return user_item_matrix
 
 
-def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, min_ratings=3, uid_colname='user_id', iid_colname='item_id',
+def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, min_ratings=3,
+                                          uid_original_colname=USER_ID_COL, uid_consecutive_colname=UID_TEST_COL,
+                                          iid_colname='item_id',
                                           random_state=999):
     Xr_test_pred_hidden = Xr_test.copy()
     X_test_raw_pred_hidden = X_test_raw.copy()
@@ -95,14 +99,17 @@ def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, mi
     np.random.seed(random_state)
     selected_uids = np.random.choice(user_ids, size=to_choose)
 
-    uids = []
+    uids_original = []
+    uids_consecutive = []
     item_ids = []
     y = []
 
     for uid in selected_uids:
-        user_data = X_test_raw.loc[X_test_raw[uid_colname] == uid, :]
+        user_data = X_test_raw.loc[X_test_raw[uid_consecutive_colname] == uid, :]
         item_id = int(np.random.choice(user_data[iid_colname], size=1)[0])
-        uids.append(uid)
+        uid_original = user_data[uid_original_colname].unique()[0]
+        uids_consecutive.append(uid)
+        uids_original.append(uid_original)
         item_ids.append(item_id)
         rating_sparse = Xr_test[uid, item_id].flatten()[0]
         rating_raw = user_data.loc[user_data.item_id == item_id, "rating"].iloc[0]
@@ -112,9 +119,10 @@ def hide_test_data_ratings_for_prediction(Xr_test, X_test_raw, perc_test=0.3, mi
         y.append(rating_sparse)
         Xr_test_pred_hidden[uid, item_id] = 0.0
         X_test_raw_pred_hidden.loc[
-            (X_test_raw_pred_hidden[uid_colname] == uid) & (X_test_raw_pred_hidden[iid_colname] == item_id)] = 0.0
+            (X_test_raw_pred_hidden[uid_consecutive_colname] == uid) & (
+                        X_test_raw_pred_hidden[iid_colname] == item_id)] = 0.0
 
-    return uids, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden
+    return uids_consecutive, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden
 
 
 def train_validation_test_split(
@@ -157,12 +165,12 @@ def train_validation_test_split(
     Xr_val = prepare_sparse_ratings_matrix(X_val_raw, nuser, nitem, UID_VALC_COL)
     Xf_val = X_val_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
 
-    uids, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
+    uids, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
         Xr_test,
         X_test_raw[[USER_ID_COL, UID_TEST_COL, ITEM_ID_COL, RATING]],
         perc_test=test_ratigs_perc_to_hide,
         random_state=test_ratings_to_hide_seed,
-        uid_colname=UID_TEST_COL
+        uid_consecutive_colname=UID_TEST_COL
     )
 
     return ExperimentData(
@@ -179,6 +187,7 @@ def train_validation_test_split(
         X_val_raw[[USER_ID_COL, UID_VALC_COL, ITEM_ID_COL, RATING]],
 
         uids,
+        uids_original,
         item_ids,
         y
     )
