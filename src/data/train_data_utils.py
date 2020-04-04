@@ -157,13 +157,13 @@ def train_validation_test_split(
     assert X_train_raw.shape[0] + X_test_raw.shape[0] + X_val_raw.shape[0] == data.shape[0]
 
     Xr_train = prepare_sparse_ratings_matrix(X_train_raw, nuser, nitem, UID_TRAIN_COL)
-    Xf_train = X_train_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
+    Xf_train = X_train_raw.drop(COLUMNS_TO_DROP + [UID_TRAIN_COL], axis=1).to_numpy()
 
     Xr_test = prepare_sparse_ratings_matrix(X_test_raw, nuser, nitem, UID_TEST_COL)
-    Xf_test = X_test_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
+    Xf_test = X_test_raw.drop(COLUMNS_TO_DROP + [UID_TEST_COL], axis=1).to_numpy()
 
     Xr_val = prepare_sparse_ratings_matrix(X_val_raw, nuser, nitem, UID_VALC_COL)
-    Xf_val = X_val_raw.drop(COLUMNS_TO_DROP, axis=1).to_numpy()
+    Xf_val = X_val_raw.drop(COLUMNS_TO_DROP + [UID_VALC_COL], axis=1).to_numpy()
 
     uids, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
         Xr_test,
