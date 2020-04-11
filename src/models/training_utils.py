@@ -44,7 +44,7 @@ def mape_masked(y_true, y_pred):
     y_true = y_true * mask
     y_pred = y_pred * mask
 
-    return tf.reduce_mean((y_true[y_true > 0.0] - y_pred[y_true > 0.0]) / y_true[y_true > 0.0])
+    return tf.reduce_mean(tf.abs((y_true[y_true > 0.0] - y_pred[y_true > 0.0]) / y_true[y_true > 0.0]))
 
 def mae_masked(y_true, y_pred):
     mask = tf.cast(tf.not_equal(y_true, 0), dtype='float32')

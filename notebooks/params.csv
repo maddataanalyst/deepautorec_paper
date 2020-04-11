@@ -1,0 +1,16 @@
+inputs dense;input drop;ubias;ibias;embed size;combine;dense 1;dense 2;dense 3;dense drop;batchsz;reg;reg_val;early stopping;val mape;test mape;comments
+8;0;TRUE;TRUE;30;dot;8;4;0;0;16;;0;no;0.3745;0.384;
+8;0;TRUE;TRUE;50;dot;8;4;0;0;16;;0;yes;0.375;0.384;
+8;0;TRUE;TRUE;50;dot;8;4;0;0;16;l1l2;0.001;yes;0.3744;0.384;
+8;0.5;TRUE;TRUE;30;dot;8;4;0;0;16;;0;no;0.3745;0.385;
+8;0;TRUE;TRUE;15;dot;8;4;0;0;16;l1l2;0.001;yes;0.3749;0.3855;
+8;0;TRUE;TRUE;30;dot;8;4;0;0;16;;0;yes;0.3743;0.386;
+8;0;TRUE;TRUE;15;dot;8;4;2;0;16;l1l2;0.001;yes;0.375;0.386;
+8;0;TRUE;TRUE;15;dot;8;0;0;0;16;l1l2;0.001;yes;0.3766;0.387;
+8;0;TRUE;TRUE;100;dot;8;4;0;0;16;l1l2;0.001;yes;0.3783;0.3875;
+8;0;TRUE;TRUE;15;dot;16;8;0;0;16;l1l2;0.001;yes;0.3815;0.390;
+8;0;TRUE;TRUE;15;dot;4;2;0;0;16;l1l2;0.001;yes;0.3954;0.4;
+8;0;TRUE;TRUE;15;dot;16;4;0;0;16;l1l2;0.001;yes;0.39;0.4;
+8;0;TRUE;TRUE;30;dot;8;4;0;0;16;;0;no;0.3745;0.384;
+8;0;TRUE;TRUE;30;dot;8;4;0;0;32;;0;yes;0.3771;0.386;
+4;0;TRUE;TRUE;30;dot;8;4;0;0;32;;0;yes;0.3752;0.385;
