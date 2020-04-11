@@ -19,7 +19,8 @@ RATING = 'rating'
 
 ITEM_ID_COL = 'item_id'
 USER_ID_COL = 'user_id'
-COLUMNS_TO_DROP = [RATING, 'year', ITEM_ID_COL, 'split', 'category', 'timestamp', USER_ID_COL]
+#COLUMNS_TO_DROP = [RATING, 'year', ITEM_ID_COL, 'split', 'category', 'timestamp', USER_ID_COL]
+COLUMNS_TO_DROP = [RATING, ITEM_ID_COL, 'split', 'timestamp', USER_ID_COL]
 
 ExperimentData = namedtuple(
     "ExperimentData",
@@ -39,7 +40,8 @@ ExperimentData = namedtuple(
         "test_uids",
         "test_uids_original",
         "test_iids",
-        "test_y"
+        "test_y",
+        "feature_names"
     ]
 )
 
@@ -156,6 +158,8 @@ def train_validation_test_split(
 
     assert X_train_raw.shape[0] + X_test_raw.shape[0] + X_val_raw.shape[0] == data.shape[0]
 
+    feature_names = list(X_train_raw.drop(COLUMNS_TO_DROP + [UID_TRAIN_COL], axis=1).columns)
+
     Xr_train = prepare_sparse_ratings_matrix(X_train_raw, nuser, nitem, UID_TRAIN_COL)
     Xf_train = X_train_raw.drop(COLUMNS_TO_DROP + [UID_TRAIN_COL], axis=1).to_numpy()
 
@@ -189,7 +193,8 @@ def train_validation_test_split(
         uids,
         uids_original,
         item_ids,
-        y
+        y,
+        feature_names
     )
 
 
