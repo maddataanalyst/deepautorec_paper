@@ -198,9 +198,9 @@ def train_validation_test_split(
     )
 
 
-def prepare_experiment_data(download_new=False) -> ExperimentData:
+def prepare_experiment_data(download_new=False, test_seed:int=123, valid_seed:int=456) -> ExperimentData:
     raw_data = load_dataset(download_new)
     raw_data = get_dummy_values(fill_missing_values(raw_data))
     data_min_n_ratings = get_users_with_min_n_ratings(raw_data, 3)
-    experiment_data = train_validation_test_split(data_min_n_ratings)
+    experiment_data = train_validation_test_split(data_min_n_ratings, test_seed=test_seed, valid_seed=valid_seed)
     return experiment_data
