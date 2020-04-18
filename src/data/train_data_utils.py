@@ -152,10 +152,13 @@ def crossval_generator(data: pd.DataFrame,
     cv = 0
     for train_ids, test_val_ids in kf.split(data.user_id.unique()):
         print(f"Processing cv {cv}")
+        print(f"Initial train size: {len(train_ids)}")
         n_train = len(train_ids) // 2
         np.random.seed(123)
         np.random.shuffle(train_ids)
         train_ids = train_ids[:n_train]
+        print(f"Train ids reduced: {len(train_ids)}")
+        print(f"Test val ids: {len(test_val_ids)}")
         cv += 1
         yield prepare_experiment_data_from_sample(data, nitem, nuser, test_ratigs_perc_to_hide,
                                                   test_ratings_to_hide_seed,
@@ -221,7 +224,11 @@ def prepare_experiment_data_from_sample(
         ratings_data[dtype] = ratings_ds
         features_data[dtype] = features_matrix
 
-    assert sum([ds.shape[0] for ds in processed_data.values()]) == len(train_ids) + len(test_val_ids) #data.shape[0]
+        print(f"Dtype: {dtype} shape: {dset.shape[0]}")
+
+    print(f"N train ids: {len(train_ids)}")
+    print(f"N train val ids: {len(test_val_ids)}")
+    #assert sum([ds.shape[0] for ds in processed_data.values()]) == len(train_ids) + len(test_val_ids) #data.shape[0]
 
     uids, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
         ratings_data[DataType.TEST],
