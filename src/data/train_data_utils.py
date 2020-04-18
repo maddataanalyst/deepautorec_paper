@@ -153,11 +153,11 @@ def crossval_generator(data: pd.DataFrame,
     for train_ids, test_val_ids in kf.split(data.user_id.unique()):
         print(f"Processing cv {cv}")
         print(f"Initial train size: {len(train_ids)}")
-        n_train = len(train_ids) // 2
-        np.random.seed(123)
-        np.random.shuffle(train_ids)
-        train_ids = train_ids[:n_train]
-        print(f"Train ids reduced: {len(train_ids)}")
+        #n_train = len(train_ids) // 4
+        #np.random.seed(123)
+        #np.random.shuffle(train_ids)
+        #train_ids = train_ids[:n_train]
+        #print(f"Train ids reduced: {len(train_ids)}")
         print(f"Test val ids: {len(test_val_ids)}")
         cv += 1
         yield prepare_experiment_data_from_sample(data, nitem, nuser, test_ratigs_perc_to_hide,
@@ -270,5 +270,5 @@ def prepare_crossval_experiment(download_new=False, test_size: float = 0.4, test
     raw_data = load_dataset(download_new)
     raw_data = get_dummy_values(fill_missing_values(raw_data))
     data_min_n_ratings = get_users_with_min_n_ratings(raw_data, 3)
-    for exd in crossval_generator(raw_data, test_size, test_seed, valid_seed, nsplits=nsplits):
+    for exd in crossval_generator(data_min_n_ratings, test_size, test_seed, valid_seed, nsplits=nsplits):
         yield exd
