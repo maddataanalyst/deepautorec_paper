@@ -149,7 +149,14 @@ def crossval_generator(data: pd.DataFrame,
     nuser, nitem = data.user_id.max() + 1, data.item_id.max() + 1
 
     kf = KFold(n_splits=nsplits, random_state=valid_seed)
+    cv = 0
     for train_ids, test_val_ids in kf.split(data.user_id.unique()):
+        print(f"Processing cv {cv}")
+        n_train = len(train_ids) // 2
+        np.random.seed(123)
+        np.random.shuffle(train_ids)
+        train_ids = train_ids[:n_train]
+        cv += 1
         yield prepare_experiment_data_from_sample(data, nitem, nuser, test_ratigs_perc_to_hide,
                                                   test_ratings_to_hide_seed,
                                                   test_seed, test_size, test_val_ids, train_ids)
@@ -183,7 +190,8 @@ def prepare_experiment_data_from_sample(
         test_seed,
         test_size,
         test_val_ids,
-        train_ids):
+        train_ids,
+        prepare_sparse_matrix=False):
     X_train_raw = data.loc[data.user_id.isin(train_ids)]
     test_ids, validation_ids = train_test_split(test_val_ids, test_size=test_size, random_state=test_seed)
 
@@ -203,7 +211,7 @@ def prepare_experiment_data_from_sample(
 
     for dtype, (dset, new_uid_col) in raw_data_sets.items():
         processed_raw = make_id_column_consecutive_integer_from_0(dset.reset_index(drop=True), USER_ID_COL, new_uid_col)
-        ratings_ds = prepare_sparse_ratings_matrix(processed_raw, nuser, nitem, new_uid_col)
+        ratings_ds = prepare_sparse_ratings_matrix(processed_raw, nuser, nitem, new_uid_col)  #if prepare_sparse_ratings_matrix else None
         features_ds = processed_raw.drop(COLUMNS_TO_DROP + [new_uid_col], axis=1)
         if feature_names == []:
             feature_names = list(features_ds.columns)
@@ -213,7 +221,7 @@ def prepare_experiment_data_from_sample(
         ratings_data[dtype] = ratings_ds
         features_data[dtype] = features_matrix
 
-    assert sum([ds.shape[0] for ds in processed_data.values()]) == data.shape[0]
+    assert sum([ds.shape[0] for ds in processed_data.values()]) == len(train_ids) + len(test_val_ids) #data.shape[0]
 
     uids, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
         ratings_data[DataType.TEST],
