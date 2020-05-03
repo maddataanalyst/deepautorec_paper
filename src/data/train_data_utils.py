@@ -230,6 +230,7 @@ def prepare_experiment_data_from_sample(
     print(f"N train val ids: {len(test_val_ids)}")
     #assert sum([ds.shape[0] for ds in processed_data.values()]) == len(train_ids) + len(test_val_ids) #data.shape[0]
 
+    #TODO: fix implementation of test ratings hiding. Now it is useless and wrong.
     uids, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
         ratings_data[DataType.TEST],
         processed_data[DataType.TEST][[USER_ID_COL, UID_TEST_COL, ITEM_ID_COL, RATING]],
