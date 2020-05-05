@@ -28,23 +28,19 @@ COLUMNS_TO_DROP = [RATING, ITEM_ID_COL, 'split', 'timestamp', USER_ID_COL]
 ExperimentData = namedtuple(
     "ExperimentData",
     [
-        "Xratings_train",
-        "Xratings_test",
-        "Xratings_valid",
-
         "Xfeatures_train",
         "Xfeatures_test",
         "Xfeatures_valid",
 
         "Xraw_train",
         "Xraw_test",
+        "Xhidden_test",
         "Xraw_valid",
-
-        "test_uids",
-        "test_uids_original",
-        "test_iids",
-        "test_y",
-        "feature_names"
+        "test_records_selected",
+        
+        "feature_names",
+        "nuser",
+        "nitems"
     ]
 )
 
@@ -153,11 +149,6 @@ def crossval_generator(data: pd.DataFrame,
     for train_ids, test_val_ids in kf.split(data.user_id.unique()):
         print(f"Processing cv {cv}")
         print(f"Initial train size: {len(train_ids)}")
-        #n_train = len(train_ids) // 4
-        #np.random.seed(123)
-        #np.random.shuffle(train_ids)
-        #train_ids = train_ids[:n_train]
-        #print(f"Train ids reduced: {len(train_ids)}")
         print(f"Test val ids: {len(test_val_ids)}")
         cv += 1
         yield prepare_experiment_data_from_sample(data, nitem, nuser, test_ratigs_perc_to_hide,
@@ -202,60 +193,49 @@ def prepare_experiment_data_from_sample(
                             data.loc[data.user_id.isin(validation_ids)]
 
     raw_data_sets = {
-        DataType.TRAIN: (X_train_raw, UID_TRAIN_COL),
-        DataType.TEST: (X_test_raw, UID_TEST_COL),
-        DataType.VALID: (X_val_raw, UID_VALC_COL)
+        DataType.TRAIN: X_train_raw,
+        DataType.TEST: X_test_raw,
+        DataType.VALID: X_val_raw
     }
+
     processed_data = {}
     ratings_data = {}
     features_data = {}
 
     feature_names = []
 
-    for dtype, (dset, new_uid_col) in raw_data_sets.items():
-        processed_raw = make_id_column_consecutive_integer_from_0(dset.reset_index(drop=True), USER_ID_COL, new_uid_col)
-        ratings_ds = prepare_sparse_ratings_matrix(processed_raw, nuser, nitem, new_uid_col)  #if prepare_sparse_ratings_matrix else None
-        features_ds = processed_raw.drop(COLUMNS_TO_DROP + [new_uid_col], axis=1)
+    for dtype, dset in raw_data_sets.items():
+        features_ds = dset.drop(COLUMNS_TO_DROP + ['user_id', 'item_id'], axis=1)
         if feature_names == []:
             feature_names = list(features_ds.columns)
         features_matrix = features_ds.to_numpy()
 
-        processed_data[dtype] = processed_raw
-        ratings_data[dtype] = ratings_ds
+        processed_data[dtype] = dset.copy()
         features_data[dtype] = features_matrix
 
         print(f"Dtype: {dtype} shape: {dset.shape[0]}")
 
     print(f"N train ids: {len(train_ids)}")
     print(f"N train val ids: {len(test_val_ids)}")
-    #assert sum([ds.shape[0] for ds in processed_data.values()]) == len(train_ids) + len(test_val_ids) #data.shape[0]
 
-    #TODO: fix implementation of test ratings hiding. Now it is useless and wrong.
-    uids, uids_original, item_ids, y, Xr_test_pred_hidden, X_test_raw_pred_hidden = hide_test_data_ratings_for_prediction(
-        ratings_data[DataType.TEST],
-        processed_data[DataType.TEST][[USER_ID_COL, UID_TEST_COL, ITEM_ID_COL, RATING]],
-        perc_test=test_ratigs_perc_to_hide,
-        random_state=test_ratings_to_hide_seed,
-        uid_consecutive_colname=UID_TEST_COL
-    )
+    hidden_test_data = processed_data[DataType.TEST].copy()
+    np.random.seed(test_ratings_to_hide_seed)
+    test_recoreds_to_hide = hidden_test_data.sample(frac=test_ratigs_perc_to_hide)
+    hidden_test_data.loc[test_recoreds_to_hide.index, "rating"] = 0
+
     return ExperimentData(
-        ratings_data[DataType.TRAIN],
-        Xr_test_pred_hidden,
-        ratings_data[DataType.VALID],
-
         features_data[DataType.TRAIN],
         features_data[DataType.TEST],
         features_data[DataType.VALID],
 
-        processed_data[DataType.TRAIN][[USER_ID_COL, UID_TRAIN_COL, ITEM_ID_COL, RATING]],
-        X_test_raw_pred_hidden,
-        processed_data[DataType.VALID][[USER_ID_COL, UID_VALC_COL, ITEM_ID_COL, RATING]],
-
-        uids,
-        uids_original,
-        item_ids,
-        y,
-        feature_names
+        processed_data[DataType.TRAIN][[USER_ID_COL, ITEM_ID_COL, RATING]],
+        processed_data[DataType.TEST][[USER_ID_COL, ITEM_ID_COL, RATING]],
+        hidden_test_data[[USER_ID_COL, ITEM_ID_COL, RATING]],
+        processed_data[DataType.VALID][[USER_ID_COL, ITEM_ID_COL, RATING]],
+        test_recoreds_to_hide,
+        feature_names,
+        nuser,
+        nitem
     )
 
 
