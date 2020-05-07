@@ -10,6 +10,7 @@ def fill_missing_values(raw_data: pd.DataFrame) -> pd.DataFrame:
 
 def get_dummy_values(raw_data: pd.DataFrame) -> pd.DataFrame:
     other_cols = set(raw_data.columns).difference(FEATURE_COLUMNS)
+    print(other_cols)
     raw_data['year'] = raw_data['year'].astype('str')
     encoded_data = pd.get_dummies(raw_data[FEATURE_COLUMNS], sparse=True)
     for other_col in other_cols:
