@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import pandas as pd
 import numpy as np
@@ -239,17 +239,17 @@ def prepare_experiment_data_from_sample(
     )
 
 
-def prepare_experiment(download_new=False, test_seed: int = 123, valid_seed: int = 456) -> ExperimentData:
+def prepare_experiment(download_new=False, test_seed: int = 123, valid_seed: int = 456) -> Tuple[ExperimentData, dict]:
     raw_data = load_dataset(download_new)
-    raw_data = get_dummy_values(fill_missing_values(raw_data))
+    raw_data, encoders = get_dummy_values(fill_missing_values(raw_data))
     data_min_n_ratings = get_users_with_min_n_ratings(raw_data, 3)
     experiment_data = train_validation_test_split(data_min_n_ratings, test_seed=test_seed, valid_seed=valid_seed)
-    return experiment_data
+    return experiment_data, encoders
 
 
 def prepare_crossval_experiment(download_new=False, test_size: float = 0.4, test_seed: int = 123, valid_seed: int = 456, nsplits: int = 10):
     raw_data = load_dataset(download_new)
-    raw_data = get_dummy_values(fill_missing_values(raw_data))
+    raw_data, encoders = get_dummy_values(fill_missing_values(raw_data))
     data_min_n_ratings = get_users_with_min_n_ratings(raw_data, 3)
-    for exd in crossval_generator(data_min_n_ratings, test_size, test_seed, valid_seed, nsplits=nsplits):
-        yield exd
+    crossvals = list(crossval_generator(data_min_n_ratings, test_size, test_seed, valid_seed, nsplits=nsplits))
+    return crossvals, encoders
